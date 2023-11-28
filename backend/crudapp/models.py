@@ -4,14 +4,13 @@ from django.utils import timezone
 from .middleware import ClientIPMiddleware
 import os
 
+
 def upload_to(instance, filename):
     # Handle the filename separately
     current_datetime = timezone.now().strftime("%Y%m%d%H%M%S")
     _, extension = os.path.splitext(filename)
     new_filename = f"{current_datetime}{extension}"
     return f'public/personalinfo/{new_filename}'
-
-
 class PersonalInfo(models.Model):
     name = models.CharField(max_length=255)
     email = models.EmailField(max_length=250, unique=True)
@@ -30,6 +29,16 @@ class PersonalInfo(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        if not self.id:
+            # It's a new instance being created
+            self.is_created = True  # Mark the instance as created
+            request = self._get_dummy_request()
+            middleware = ClientIPMiddleware(get_response=None)
+            middleware.get_response = lambda request: None
+            middleware(request)
+            self.user_ip = kwargs.pop(
+                'user_ip', middleware.get_client_ip(request))
+            
         # Set a default image if not provided
         if not self.image:
             # Change this to your default image path
