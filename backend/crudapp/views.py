@@ -5,7 +5,6 @@ from .models import PersonalInfo
 from .serializers import PersonalInfoSerializer
 from django.utils import timezone
 from crudapp.pagination import CustomPagination
-
 class PersonalInfoListCreateAPIView(generics.ListCreateAPIView):
     queryset = PersonalInfo.objects.filter(is_active=True).order_by("-id")
     serializer_class = PersonalInfoSerializer
@@ -16,41 +15,50 @@ class PersonalInfoListCreateAPIView(generics.ListCreateAPIView):
         user_ip = getattr(self.request, 'client_ip', None)
         serializer.save(user_ip=user_ip)
 
-
-class PersonalInfoRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+class PersonalInfoRetrieveUpdateAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PersonalInfo.objects.all()
     serializer_class = PersonalInfoSerializer
 
-    def update(self, request, *args, **kwargs):
+    def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            existing_image = instance.image
-
-            serializer = self.get_serializer(
-                instance, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-
-            # If a new image is provided
-            new_image = request.data.get('image')
-            if new_image:
-                # If there is an old image, delete it
-                if existing_image:
-                    self.delete_old_image(existing_image)
-                # Update the image name with the correct format
-                current_datetime = timezone.now().strftime("%Y%m%d%H%M%S")
-                new_filename = f"{current_datetime}.{new_image.name.split('.')[-1].lower()}"
-                instance.image.name = f"public/personalinfo/{new_filename}"
-
-                # Print the updated file name
-                print(f"Updated file name: {instance.image.name}")
-
-            self.perform_update(serializer)
-
-            return Response(serializer.data)
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
         except PersonalInfo.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    def update(self, request, *args, **kwargs):
+            try:
+                instance = self.get_object()
+                existing_image = instance.image
+
+                serializer = self.get_serializer(
+                    instance, data=request.data, partial=True)
+                serializer.is_valid(raise_exception=True)
+
+                # If a new image is provided
+                new_image = request.data.get('image')
+                if new_image:
+                    # If there is an old image, delete it
+                    if existing_image:
+                        self.delete_old_image(existing_image)
+                    # Update the image name with the correct format
+                    current_datetime = timezone.now().strftime("%Y%m%d%H%M%S")
+                    new_filename = f"{current_datetime}.{new_image.name.split('.')[-1].lower()}"
+                    instance.image.name = f"public/personalinfo/{new_filename}"
+
+                    # Print the updated file name
+                    print(f"Updated file name: {instance.image.name}")
+
+                self.perform_update(serializer)
+
+                return Response(serializer.data)
+            except PersonalInfo.DoesNotExist:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete_old_image(self, old_image):
         try:
@@ -59,3 +67,6 @@ class PersonalInfoRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
         except Exception as e:
             # Handle the exception (e.g., log the error)
             pass
+
+    
+

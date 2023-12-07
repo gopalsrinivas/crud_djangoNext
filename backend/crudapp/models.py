@@ -20,7 +20,6 @@ class PersonalInfo(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
         verbose_name = "1. Personal Info"
         verbose_name_plural = "1. Personal Info"
@@ -56,4 +55,4 @@ class PersonalInfo(models.Model):
     def _get_dummy_request(self):
         from django.test import RequestFactory
         request_factory = RequestFactory()
-        return request_factory.get('/')
+        return request_factory.get('/') 
